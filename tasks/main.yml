@@ -2,7 +2,7 @@
 
 - name: check presence of portmapper
   stat:
-    path: /etc/systemd/system/sockets.target.wants/rpcbind.socket
+    path: /var/run/rpcbind.sock
   register: portmapper
 
 - name: disable portmapper
@@ -19,6 +19,16 @@
       line='inet_interfaces = localhost'
       state=present
   ignore_errors: true
+  notify: restart postfix
+
+- name: configure mail transfer agent for ipv4 only
+  lineinfile:
+      dest=/etc/postfix/main.cf
+      regexp='^inet_protocols'
+      line='inet_protocols = ipv4'
+      state=present
+  ignore_errors: true
+  notify: restart postfix
 
 - name: remove insecure daemons
   yum:
