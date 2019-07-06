@@ -1,0 +1,99 @@
+useless_suid_sgid:
+  - /usr/bin/wall
+  - /usr/bin/chfn
+  - /usr/bin/chsh
+  - /usr/bin/newgrp
+  - /usr/bin/gpasswd
+  - /usr/bin/pkexec
+  - /usr/bin/write
+  - /usr/sbin/usernetctl
+
+insecure_daemons:
+  - avahi
+  - bind
+  - cups
+  - dhcp
+  - dovecot
+  - httpd
+  - net-snmp
+  - openldap-servers
+  - rsh
+  - rsh-server
+  - samba
+  - talk
+  - talk-server
+  - telnet-server
+  - tftp
+  - tftp-server
+  - vsftpd
+  - xinetd
+  - xorg-x11-server-common
+  - yp-tools
+  - ypserv
+
+hashicorp_vault_ssh: true
+
+# http://people.redhat.com/swells/scap-security-guide/tables/table-rhel7-nistrefs-ospp-rhel7.html
+selinux_booleans_enable:
+  - auditadm_exec_content
+  - cron_userdomain_transition
+  - domain_fd_use
+  - fips_mode
+  - logadm_exec_content
+  - logging_syslogd_use_tty
+  - login_console_enabled
+  - mount_anyfile
+  - secadm_exec_content
+  - selinuxuser_execmod
+  - selinuxuser_ping
+  - staff_exec_content
+  - sysadm_exec_content
+  - unconfined_login
+  - user_exec_content
+
+selinux_booleans_disable:
+  - abrt_anon_write
+  - abrt_handle_event
+  - abrt_upload_watch_anon_write
+  - cron_can_relabel
+  - cron_system_cronjob_use_shares
+  - daemons_dump_core
+  - daemons_use_tcp_wrapper
+  - daemons_use_tty
+  - deny_execmem
+  - deny_ptrace
+  - domain_kernel_load_modules
+  - gpg_web_anon_write
+  - guest_exec_content
+  - logging_syslogd_can_sendmail
+  - mmap_low_allowed
+  - mock_enable_homedirs
+  - polyinstantiation_enabled
+  - secure_mode
+  - secure_mode_insmod
+  - secure_mode_policyload
+  - selinuxuser_direct_dri_enabled
+  - selinuxuser_execheap
+  - selinuxuser_execstack
+  - selinuxuser_mysql_connect_enabled
+  - selinuxuser_postgresql_connect_enabled
+  - selinuxuser_rw_noexattrfile
+  - selinuxuser_share_music
+  - selinuxuser_tcp_server
+  - selinuxuser_udp_server
+  - selinuxuser_use_ssh_chroot
+  - ssh_chroot_rw_homedirs
+  - ssh_keysign
+  - ssh_sysadm_login
+  - use_ecryptfs_home_dirs
+  - xdm_bind_vnc_tcp_port
+  - xdm_exec_bootloader
+  - xdm_sysadm_login
+  - xdm_write_home
+  - xguest_connect_network
+  - xguest_exec_content
+  - xguest_mount_media
+  - xguest_use_bluetooth
+  - xserver_clients_write_xshm
+  - xserver_execmem
+  - xserver_object_manager

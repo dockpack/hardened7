@@ -1,0 +1,121 @@
+---
+
+- name: check presence of portmapper
+  stat:
+    path: /etc/systemd/system/sockets.target.wants/rpcbind.socket
+  register: portmapper
+
+- name: disable portmapper
+  systemd:
+    name: rpcbind.socket
+    state: stopped
+    enabled: no
+  when: portmapper.stat.exists
+
+- name: configure mail transfer agent for local-only mode
+  lineinfile:
+      dest=/etc/postfix/main.cf
+      regexp='^inet_interfaces'
+      line='inet_interfaces = localhost'
+      state=present
+  ignore_errors: true
+
+- name: remove insecure daemons
+  yum:
+    name: "{{ insecure_daemons }}"
+    state: absent
+
+- name: update ssh packages
+  yum:
+    state: latest
+    name:
+      - openssh
+      - openssh-clients
+      - openssh-server
+  tags:
+    - skip_ansible_lint  # here we do want latest
+    - openssh
+    - openssl
+
+- name: manage direct root login devices
+  copy:
+    content: ''
+    dest: /etc/securetty
+    owner: root
+    group: root
+    mode: 0600
+
+- name: ensure the logon failure delay is set
+  lineinfile:
+      state: present
+      dest: /etc/login.defs
+      regexp: '^FAIL_DELAY'
+      line: 'FAIL_DELAY          1'
+
+- name: kernel core dumps must be disabled unless needed
+  service:
+      name: kdump
+      enabled: no
+      state: stopped
+
+- name: manage kernel module loading
+  copy:
+    src: modprobe.conf
+    dest: /etc/modprobe.d/CIS.conf
+    owner: root
+    group: root
+
+- name: manage kernel parameters
+  template:
+    src: 99-sysctl.conf.j2
+    dest: /etc/sysctl.d/99-sysctl.conf
+    owner: root
+    group: root
+  register: sysctl_conf
+
+- name: reload kernel parameters
+  command: sysctl --load=/etc/sysctl.d/99-sysctl.conf
+  when: sysctl_conf.changed
+
+- name: ensure gpgcheck is globally activated
+  replace:
+      name: /etc/yum.conf
+      regexp: "^gpgcheck=0"
+      replace: "gpgcheck=1"
+
+- name: ensure core dumps are restricted
+  lineinfile:
+      state: present
+      dest: /etc/security/limits.conf
+      regexp: '^#?\\*.*core'
+      line: '*                hard    core            0'
+      insertbefore: '^# End of file'
+
+- name: ensure prelink is disabled
+  yum:
+    name: prelink
+    state: absent
+
+- name: disable useless suid and sgid commands
+  file:
+    path: "{{ item }}"
+    mode: 0755
+  ignore_errors: true
+  with_items:
+    - "{{ useless_suid_sgid }}"
+
+- name: disable sebooleans that should be disabled
+  seboolean:
+    name: "{{ item }}"
+    state: false
+    persistent: yes
+  with_items: "{{ selinux_booleans_disable }}"
+  when: ansible_selinux.status == "enabled"
+
+- name: enable sebooleans that should be enabled
+  seboolean:
+    name: "{{ item }}"
+    state: true
+    persistent: yes
+  with_items: "{{ selinux_booleans_enable }}"
+  when: ansible_selinux.status == "enabled"
