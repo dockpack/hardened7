@@ -1,5 +1,11 @@
 ---
 
+- name: assert current platform
+  assert:
+    that:
+      - ansible_os_family == 'RedHat'
+      - ansible_distribution_major_version == "7"
+
 - name: check presence of portmapper
   stat:
     path: /var/run/rpcbind.sock
@@ -9,24 +15,25 @@
   systemd:
     name: rpcbind.socket
     state: stopped
-    enabled: no
+    enabled: false
+  ignore_errors: true
   when: portmapper.stat.exists
 
 - name: configure mail transfer agent for local-only mode
   lineinfile:
-      dest=/etc/postfix/main.cf
-      regexp='^inet_interfaces'
-      line='inet_interfaces = localhost'
-      state=present
+    dest: /etc/postfix/main.cf
+    regexp: '^inet_interfaces'
+    line: 'inet_interfaces = localhost'
+    state: present
   ignore_errors: true
   notify: restart postfix
 
 - name: configure mail transfer agent for ipv4 only
   lineinfile:
-      dest=/etc/postfix/main.cf
-      regexp='^inet_protocols'
-      line='inet_protocols = ipv4'
-      state=present
+    dest: /etc/postfix/main.cf
+    regexp: '^inet_protocols'
+    line: 'inet_protocols = ipv4'
+    state: present
   ignore_errors: true
   notify: restart postfix
 
@@ -34,18 +41,19 @@
   yum:
     name: "{{ insecure_daemons }}"
     state: absent
+  ignore_errors: true
 
-- name: update ssh packages
+- name: update packages
   yum:
     state: latest
     name:
       - openssh
       - openssh-clients
       - openssh-server
+      - libsemanage-python
   tags:
     - skip_ansible_lint  # here we do want latest
     - openssh
-    - openssl
 
 - name: manage direct root login devices
   copy:
@@ -57,16 +65,17 @@
 
 - name: ensure the logon failure delay is set
   lineinfile:
-      state: present
-      dest: /etc/login.defs
-      regexp: '^FAIL_DELAY'
-      line: 'FAIL_DELAY          1'
+    state: present
+    dest: /etc/login.defs
+    regexp: '^FAIL_DELAY'
+    line: 'FAIL_DELAY          1'
 
 - name: kernel core dumps must be disabled unless needed
   service:
-      name: kdump
-      enabled: no
-      state: stopped
+    name: kdump
+    enabled: false
+    state: stopped
+  ignore_errors: true
 
 - name: manage kernel module loading
   copy:
@@ -81,25 +90,21 @@
     dest: /etc/sysctl.d/99-sysctl.conf
     owner: root
     group: root
-  register: sysctl_conf
-
-- name: reload kernel parameters
-  command: sysctl --load=/etc/sysctl.d/99-sysctl.conf
-  when: sysctl_conf.changed
+  notify: reload kernel parameters
 
 - name: ensure gpgcheck is globally activated
   replace:
-      name: /etc/yum.conf
-      regexp: "^gpgcheck=0"
-      replace: "gpgcheck=1"
+    name: /etc/yum.conf
+    regexp: "^gpgcheck=0"
+    replace: "gpgcheck=1"
 
 - name: ensure core dumps are restricted
   lineinfile:
-      state: present
-      dest: /etc/security/limits.conf
-      regexp: '^#?\\*.*core'
-      line: '*                hard    core            0'
-      insertbefore: '^# End of file'
+    state: present
+    dest: /etc/security/limits.conf
+    regexp: '^#?\\*.*core'
+    line: '*                hard    core            0'
+    insertbefore: '^# End of file'
 
 - name: ensure prelink is disabled
   yum:
@@ -118,7 +123,7 @@
   seboolean:
     name: "{{ item }}"
     state: false
-    persistent: yes
+    persistent: true
   with_items: "{{ selinux_booleans_disable }}"
   when: ansible_selinux.status == "enabled"
 
@@ -126,6 +131,6 @@
   seboolean:
     name: "{{ item }}"
     state: true
-    persistent: yes
+    persistent: true
   with_items: "{{ selinux_booleans_enable }}"
   when: ansible_selinux.status == "enabled"

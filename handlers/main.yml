@@ -3,6 +3,9 @@
 - name: restart postfix
   systemd:
     name: postfix
-    daemon_reload: yes
-    enabled: yes
+    daemon_reload: true
+    enabled: true
     state: started
+
+- name: reload kernel parameters
+  command: sysctl --load=/etc/sysctl.d/99-sysctl.conf
