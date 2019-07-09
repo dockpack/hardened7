@@ -28,6 +28,14 @@
   ignore_errors: true
   notify: restart postfix
 
+- name: Reconfigure SMTP banner settings in order to not disclose software version.
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: 'smtpd_banner'
+    line: 'smtpd_banner = $myhostname ESMTP'
+    state: present
+  notify: restart postfix
+
 - name: configure mail transfer agent for ipv4 only
   lineinfile:
     dest: /etc/postfix/main.cf
@@ -94,6 +102,15 @@
     line: 'NETWORKING_IPV6=no'
     state: present
 
+- name: Increase DNS query attempts
+  lineinfile:
+    path: /etc/sysconfig/network
+    regexp: "^RES_OPTIONS="
+    line: 'RES_OPTIONS="timeout:1 attempts:5"'
+  notify: restart network
+  tags:
+    - dnsconfig
+
 - name: disable interface usage of ipv6
   when: disable_ipv6 is defined and disable_ipv6|bool
   lineinfile:
@@ -133,6 +150,9 @@
       - openssh-clients
       - openssh-server
       - libsemanage-python
+      - policycoreutils-python
+      - ca-certificates
+      - jq
       - screen
   tags:
     - skip_ansible_lint  # here we do want latest
@@ -175,7 +195,17 @@
     state: present
     dest: /etc/profile
     regexp: '^TMOUT='
-    line: 'readonly TMOUT={{ TMOUT }}'
+    line: 'TMOUT={{ TMOUT }}'
+
+- name: Setup bash command history timestamps
+  template:
+    src: bash_profile
+    dest: /etc/profile.d/history.sh
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+    - bash_history
 
 - name: set password hashing algorithm in /etc/libuser.conf
   lineinfile:
@@ -210,10 +240,11 @@
   notify: reload kernel parameters
 
 - name: ensure gpgcheck is activated on repository metadata
-  replace:
-    name: /etc/yum.conf
+  lineinfile:
+    path: /etc/yum.conf
     regexp: "^repo_gpgcheck=0"
-    replace: "repo_gpgcheck={{ repo_gpgcheck }}"
+    line: "repo_gpgcheck={{ repo_gpgcheck }}"
+    state: present
 
 - name: ensure gpgcheck is globally activated
   replace:
@@ -222,16 +253,17 @@
     replace: "gpgcheck={{ gpgcheck }}"
 
 - name: ensure gpgcheck is activated for local packages
-  replace:
-    name: /etc/yum.conf
+  lineinfile:
+    path: /etc/yum.conf
     regexp: "^localpkg_gpgcheck"
-    replace: "localpkg_gpgcheck={{ localpkg_gpgcheck }}"
+    line: "localpkg_gpgcheck={{ localpkg_gpgcheck }}"
+    state: present
 
 - name: ensure yum removes previous package versions
-  replace:
-    name: /etc/yum.conf
+  lineinfile:
+    path: /etc/yum.conf
     regexp: "^clean_requirements_on_remove"
-    replace: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
+    line: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
 
 - name: ensure core dumps are restricted
   lineinfile:
