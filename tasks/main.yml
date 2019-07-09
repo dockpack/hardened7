@@ -43,6 +43,88 @@
     state: absent
   ignore_errors: true
 
+- name: remove rsh trust files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /etc/hosts.equiv
+    - /root/hosts.equiv
+
+- name: install tcp_wrappers for SSH and HTTPS
+  when: tcp_wrappers is defined and tcp_wrappers|bool
+  template:
+    src: "{{ item }}"
+    dest: /etc/
+    owner: root
+    group: root
+  with_items:
+    - hosts.allow
+    - hosts.deny
+
+- name: manage kernel module loading
+  copy:
+    src: disabled.conf
+    dest: /etc/modprobe.d/disabled.conf
+    owner: root
+    group: root
+
+- name: manage kernel modules
+  copy:
+    src: modprobe.conf
+    dest: /etc/modprobe.d/CIS.conf
+    owner: root
+    group: root
+
+- name: manage kernel options
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/modprobe.d/{{ item }}"
+    owner: root
+    group: root
+  with_items:
+    - disabled.conf
+
+- name: disable interface usage of ipv6
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/sysconfig/network
+    regexp: '^NETWORKING_IPV6'
+    line: 'NETWORKING_IPV6=no'
+    state: present
+
+- name: disable interface usage of ipv6
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/sysconfig/network
+    regexp: '^IPV6INIT'
+    line: 'IPV6INIT=no'
+    state: present
+
+- name: disable support for rpc udp6
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/netconfig
+    regexp: 'udp6'
+    line: '# udp6       tpi_clts      v     inet6    udp     -       -'
+    state: present
+
+- name: disable support for rpc ipv6
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/netconfig
+    regexp: '^tcp6'
+    line: '# tcp6       tpi_cots_ord  v     inet6    tcp     -       -'
+    state: present
+
+- name: disable zeroconf networking
+  lineinfile:
+    dest: /etc/sysconfig/network
+    regexp: '^NOZEROCONF'
+    line: 'NOZEROCONF=yes'
+    state: present
+
 - name: update packages
   yum:
     state: latest
@@ -51,24 +133,66 @@
       - openssh-clients
       - openssh-server
       - libsemanage-python
+      - screen
   tags:
     - skip_ansible_lint  # here we do want latest
     - openssh
 
-- name: manage direct root login devices
+- name: manage direct root login device
   copy:
-    content: ''
+    content: tty1
     dest: /etc/securetty
     owner: root
     group: root
     mode: 0600
 
-- name: ensure the logon failure delay is set
+- name: ensure the logon.defs are set
+  template:
+    src: login.defs.j2
+    dest: /etc/login.defs
+    owner: root
+    group: root
+    mode: 0644
+
+- name: create the password policy file
+  when: pwquality is defined and pwquality|bool
+  template:
+    src: pwquality.conf.j2
+    dest: /etc/security/pwquality.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: set account expiration following inactivity
   lineinfile:
     state: present
-    dest: /etc/login.defs
-    regexp: '^FAIL_DELAY'
-    line: 'FAIL_DELAY          1'
+    dest: /etc/default/useradd
+    regexp: '^INACTIVE='
+    line: 'INACTIVE=0'
+
+- name: set interactive session timeout
+  lineinfile:
+    state: present
+    dest: /etc/profile
+    regexp: '^TMOUT='
+    line: 'readonly TMOUT={{ TMOUT }}'
+
+- name: set password hashing algorithm in /etc/libuser.conf
+  lineinfile:
+    state: present
+    dest: /etc/libuser.conf
+    regexp: '^crypt_style'
+    line: 'crypt_style = sha512'
+
+- name: prevent log in to accounts with empty password
+  command: "sed -i 's/nullok //g' /etc/pam.d/system-auth"
+  args:
+    warn: false
+
+- name: disable ctrl-alt-del reboot activation, please auditors
+  command: "systemctl mask ctrl-alt-del.target"
+  args:
+    warn: false
 
 - name: kernel core dumps must be disabled unless needed
   service:
@@ -76,13 +200,6 @@
     enabled: false
     state: stopped
   ignore_errors: true
-
-- name: manage kernel module loading
-  copy:
-    src: modprobe.conf
-    dest: /etc/modprobe.d/CIS.conf
-    owner: root
-    group: root
 
 - name: manage kernel parameters
   template:
@@ -92,18 +209,44 @@
     group: root
   notify: reload kernel parameters
 
+- name: ensure gpgcheck is activated on repository metadata
+  replace:
+    name: /etc/yum.conf
+    regexp: "^repo_gpgcheck=0"
+    replace: "repo_gpgcheck={{ repo_gpgcheck }}"
+
 - name: ensure gpgcheck is globally activated
   replace:
     name: /etc/yum.conf
     regexp: "^gpgcheck=0"
-    replace: "gpgcheck=1"
+    replace: "gpgcheck={{ gpgcheck }}"
+
+- name: ensure gpgcheck is activated for local packages
+  replace:
+    name: /etc/yum.conf
+    regexp: "^localpkg_gpgcheck"
+    replace: "localpkg_gpgcheck={{ localpkg_gpgcheck }}"
+
+- name: ensure yum removes previous package versions
+  replace:
+    name: /etc/yum.conf
+    regexp: "^clean_requirements_on_remove"
+    replace: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
 
 - name: ensure core dumps are restricted
   lineinfile:
     state: present
     dest: /etc/security/limits.conf
     regexp: '^#?\\*.*core'
-    line: '*                hard    core            0'
+    line: '* hard core 0'
+    insertbefore: '^# End of file'
+
+- name: limit the number of concurrent login sessions allowed per user
+  lineinfile:
+    state: present
+    dest: /etc/security/limits.conf
+    regexp: '^#?\\*.*maxlogins'
+    line: '* hard maxlogins 10'
     insertbefore: '^# End of file'
 
 - name: ensure prelink is disabled
@@ -118,6 +261,25 @@
   ignore_errors: true
   with_items:
     - "{{ useless_suid_sgid }}"
+
+- name: SELinux security policy
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: '^SELINUX'
+    line: 'SELINUX={{ SELINUX }}'
+    state: present
+
+- name: set SELinux type
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: '^SELINUX'
+    line: 'SELINUXTYPE={{ SELINUXTYPE }}'
+    state: present
+
+- name: restrict permissions on logfile
+  file:
+    path: /var/log/dmesg
+    mode: 0640
 
 - name: disable sebooleans that should be disabled
   seboolean:

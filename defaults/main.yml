@@ -1,4 +1,11 @@
 ---
+disable_ipv6: true
+
+tcp_wrappers: true
+tcp_wrappers_deny: 'ALL:ALL'
+tcp_wrappers_allow: ''
+tcp_wrappers_ssh: ALL
+tcp_wrappers_https: ALL
 
 useless_suid_sgid:
   - /usr/bin/wall
@@ -16,12 +23,13 @@ insecure_daemons:
   - cups
   - dhcp
   - dovecot
-  - httpd
   - net-snmp
+  - nfs-utils
   - openldap-servers
   - rsh
   - rsh-server
   - samba
+  - sendmail
   - talk
   - talk-server
   - telnet-server
@@ -30,15 +38,39 @@ insecure_daemons:
   - vsftpd
   - xinetd
   - xorg-x11-server-common
+  - ypbind
   - yp-tools
   - ypserv
 
-hashicorp_vault_ssh: true
+# interactive session timeout
+TMOUT: 600
+
+# create password policy
+pwquality: true
+
+# /etc/yum.conf
+repo_gpgcheck: 1
+gpgcheck: 1
+localpkg_gpgcheck: 1
+clean_requirements_on_remove: 1
+
+# selinux
+SELINUX: enforcing
+SELINUXTYPE: targeted
+
+#  login.defs
+FAIL_DELAY: 1
+PASS_MAX_DAYS: 60
+PASS_MIN_DAYS: 1
+PASS_MIN_LEN: 9
+PASS_WARN_AGE: 7
 
 # http://people.redhat.com/swells/scap-security-guide/tables/table-rhel7-nistrefs-ospp-rhel7.html
+# enabling daemons_use_tcp_wrapper
 selinux_booleans_enable:
   - auditadm_exec_content
   - cron_userdomain_transition
+  - daemons_use_tcp_wrapper
   - domain_fd_use
   - fips_mode
   - logadm_exec_content
@@ -60,7 +92,6 @@ selinux_booleans_disable:
   - cron_can_relabel
   - cron_system_cronjob_use_shares
   - daemons_dump_core
-  - daemons_use_tcp_wrapper
   - daemons_use_tty
   - deny_execmem
   - deny_ptrace

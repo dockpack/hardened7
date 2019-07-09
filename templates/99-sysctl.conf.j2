@@ -21,6 +21,9 @@ net.ipv4.icmp_echo_ignore_broadcasts = 1
 # Ignore all ICMP echo requests (set to 1 to enable)
 net.ipv4.icmp_echo_ignore_all = 0
 
+# DISA-STIG do not accept IPv6 Source-Routed Packets for All Interfaces
+net.ipv6.conf.all.accept_source_route = 0
+
 # Turn on protection for bad icmp error messages
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 

@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+sshd:{{ tcp_wrappers_ssh }}
+https:{{ tcp_wrappers_https }}
+{% if tcp_wrappers_line is defined %}{{ tcp_wrappers_line }}{% endif %}
