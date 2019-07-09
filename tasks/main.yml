@@ -199,7 +199,7 @@
 
 - name: Setup bash command history timestamps
   template:
-    src: bash_profile
+    src: history.sh
     dest: /etc/profile.d/history.sh
     owner: root
     group: root
