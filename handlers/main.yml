@@ -9,3 +9,9 @@
 
 - name: reload kernel parameters
   command: sysctl --load=/etc/sysctl.d/99-sysctl.conf
+
+- name: restart network
+  service:
+    name: network
+    state: restarted
+
