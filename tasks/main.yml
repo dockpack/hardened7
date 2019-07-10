@@ -214,10 +214,19 @@
     regexp: '^crypt_style'
     line: 'crypt_style = sha512'
 
-- name: prevent log in to accounts with empty password
-  command: "sed -i 's/nullok //g' /etc/pam.d/system-auth"
-  args:
-    warn: false
+- name: prevent log in to accounts with empty password - system-auth
+  when: password_required is defined and password_required|bool
+  replace:
+    dest: /etc/pam.d/system-auth
+    follow: yes
+    regexp: 'nullok'
+
+- name: prevent log in to accounts with empty password - password-auth
+  when: password_required is defined and password_required|bool
+  replace:
+    dest: /etc/pam.d/password-auth
+    follow: yes
+    regexp: 'nullok'
 
 - name: disable ctrl-alt-del reboot activation, please auditors
   command: "systemctl mask ctrl-alt-del.target"

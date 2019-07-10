@@ -47,6 +47,7 @@ TMOUT: 600
 
 # create password policy
 pwquality: true
+password_required: true
 
 # /etc/yum.conf
 repo_gpgcheck: 1
