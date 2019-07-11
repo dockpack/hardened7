@@ -119,8 +119,13 @@
     line: 'IPV6INIT=no'
     state: present
 
+- name: check if libtirpc confile file is present
+  stat:
+    path: /etc/netconfig
+  register: netconfig
+
 - name: disable support for rpc udp6
-  when: disable_ipv6 is defined and disable_ipv6|bool
+  when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
   lineinfile:
     dest: /etc/netconfig
     regexp: 'udp6'
@@ -128,7 +133,7 @@
     state: present
 
 - name: disable support for rpc ipv6
-  when: disable_ipv6 is defined and disable_ipv6|bool
+  when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
   lineinfile:
     dest: /etc/netconfig
     regexp: '^tcp6'
