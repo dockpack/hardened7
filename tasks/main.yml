@@ -28,7 +28,37 @@
   ignore_errors: true
   notify: restart postfix
 
-- name: Reconfigure SMTP banner settings in order to not disclose software version.
+- name: configure mail transfer agent for mydomain
+  when: mydomain is defined
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: '^mydomain ='
+    line: 'mydomain = {{ mydomain }}'
+    state: present
+  ignore_errors: true
+  notify: restart postfix
+
+- name: configure mail transfer agent for mydomain.mydomain
+  when: mydomain is defined
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: '^myhostname ='
+    line: 'myhostname = {{ inventory_hostname }}.{{ mydomain }}'
+    state: present
+  ignore_errors: true
+  notify: restart postfix
+
+- name: configure mail transfer agent for smtp
+  when: mydomain is defined
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: '^myorigin = '
+    line: 'myorigin = $mydomain'
+    state: present
+  ignore_errors: true
+  notify: restart postfix
+
+- name: do not disclose software version in SMTP banner
   lineinfile:
     path: /etc/postfix/main.cf
     regexp: 'smtpd_banner'
@@ -136,7 +166,7 @@
   when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
   lineinfile:
     dest: /etc/netconfig
-    regexp: '^tcp6'
+    regexp: 'tcp6'
     line: '# tcp6       tpi_cots_ord  v     inet6    tcp     -       -'
     state: present
 
@@ -223,20 +253,21 @@
   when: password_required is defined and password_required|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: yes
+    follow: true
     regexp: 'nullok'
 
 - name: prevent log in to accounts with empty password - password-auth
   when: password_required is defined and password_required|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: yes
+    follow: true
     regexp: 'nullok'
 
 - name: disable ctrl-alt-del reboot activation, please auditors
-  command: "systemctl mask ctrl-alt-del.target"
-  args:
-    warn: false
+  file:
+    path: /etc/systemd/system/ctrl-alt-del.target
+    src: /dev/null
+    state: link
 
 - name: kernel core dumps must be disabled unless needed
   service:
@@ -256,15 +287,16 @@
 - name: ensure gpgcheck is activated on repository metadata
   lineinfile:
     path: /etc/yum.conf
-    regexp: "^repo_gpgcheck=0"
+    regexp: "^repo_gpgcheck="
     line: "repo_gpgcheck={{ repo_gpgcheck }}"
     state: present
 
 - name: ensure gpgcheck is globally activated
-  replace:
-    name: /etc/yum.conf
-    regexp: "^gpgcheck=0"
-    replace: "gpgcheck={{ gpgcheck }}"
+  lineinfile:
+    path: /etc/yum.conf
+    regexp: "^gpgcheck="
+    line: "gpgcheck={{ gpgcheck }}"
+    state: present
 
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
@@ -311,14 +343,14 @@
 - name: SELinux security policy
   lineinfile:
     dest: /etc/selinux/config
-    regexp: '^SELINUX'
+    regexp: '^SELINUX=.*'
     line: 'SELINUX={{ SELINUX }}'
     state: present
 
 - name: set SELinux type
   lineinfile:
     dest: /etc/selinux/config
-    regexp: '^SELINUX'
+    regexp: '^SELINUXTYPE.*'
     line: 'SELINUXTYPE={{ SELINUXTYPE }}'
     state: present
 

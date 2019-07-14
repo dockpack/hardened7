@@ -14,4 +14,3 @@
   service:
     name: network
     state: restarted
-
