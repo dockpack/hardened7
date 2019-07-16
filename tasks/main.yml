@@ -230,6 +230,15 @@
     - openssh
     - aide
 
+- name: use FIPS 140-2 for validating hashes
+  lineinfile:
+    state: present
+    dest: /etc/aide.conf
+    regexp: '^NORMAL'
+    line: 'NORMAL = FIPSR+sha512'
+  tags:
+    - aide
+
 - name: "Build and Test AIDE Database"
   command: /usr/sbin/aide --init
   args:
