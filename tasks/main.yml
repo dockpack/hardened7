@@ -11,13 +11,20 @@
     path: /var/run/rpcbind.sock
   register: portmapper
 
-- name: disable portmapper
+- name: stop portmapper
   systemd:
     name: rpcbind.socket
     state: stopped
     enabled: false
   ignore_errors: true
   when: portmapper.stat.exists
+
+- name: disable portmapper
+  systemd:
+    name: rpcbind.service
+    state: stopped
+    enabled: false
+  ignore_errors: true
 
 - name: configure mail transfer agent for local-only mode
   lineinfile:
@@ -88,6 +95,28 @@
   with_items:
     - /etc/hosts.equiv
     - /root/hosts.equiv
+
+- block:
+    - name: detect shosts.equiv files on the system
+      find:
+        paths: /
+        recurse: true
+        patterns: shosts.equiv
+      check_mode: false
+      register: shosts_equiv_locations
+
+    - name: remove rsh trust files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ shosts_equiv_locations.files }}"
+      when: shosts_equiv_locations
+
+- name: install tcp_wrappers for SSH and HTTPS
+  when: tcp_wrappers is defined and tcp_wrappers|bool
+  yum:
+    name: tcp_wrappers
+    state: present
 
 - name: install tcp_wrappers for SSH and HTTPS
   when: tcp_wrappers is defined and tcp_wrappers|bool
@@ -176,6 +205,11 @@
     regexp: '^NOZEROCONF'
     line: 'NOZEROCONF=yes'
     state: present
+
+- name: ensure xorg-x11-server-common is removed
+  package:
+    name: xorg-x11-server-common
+    state: absent
 
 - name: update packages
   yum:
@@ -274,6 +308,8 @@
     name: kdump
     enabled: false
     state: stopped
+  register: service_result
+  failed_when: "service_result is failed and ('Could not find the requested service' not in service_result.msg)"
   ignore_errors: true
 
 - name: manage kernel parameters
@@ -298,6 +334,20 @@
     line: "gpgcheck={{ gpgcheck }}"
     state: present
 
+- name: find all yum repositories
+  find:
+    paths: "/etc/yum.repos.d/"
+    patterns: "*.repo"
+  register: yum_find
+
+- name: ensure gpgcheck enabled for all yum package repositories
+  with_items: "{{ yum_find.files }}"
+  lineinfile:
+    create: true
+    dest: "{{ item.path }}"
+    regexp: '^gpgcheck'
+    line: 'gpgcheck=1'
+
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
     path: /etc/yum.conf
@@ -307,9 +357,10 @@
 
 - name: ensure yum removes previous package versions
   lineinfile:
-    path: /etc/yum.conf
-    regexp: "^clean_requirements_on_remove"
+    dest: /etc/yum.conf
+    regexp: ^#?clean_requirements_on_remove
     line: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
+    insertafter: '\[main\]'
 
 - name: ensure core dumps are restricted
   lineinfile:
