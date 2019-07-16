@@ -22,10 +22,10 @@ MAIL_DIR	/var/spool/mail
 #	PASS_MIN_LEN	Minimum acceptable password length.
 #	PASS_WARN_AGE	Number of days warning given before a password expires.
 #
-PASS_MAX_DAYS	{{ PASS_MAX_DAYS }}
-PASS_MIN_DAYS	{{ PASS_MIN_DAYS }}
-PASS_MIN_LEN	{{ PASS_MIN_LEN }}
-PASS_WARN_AGE	{{ PASS_WARN_AGE }}
+PASS_MAX_DAYS {{ PASS_MAX_DAYS }}
+PASS_MIN_DAYS {{ PASS_MIN_DAYS }}
+PASS_MIN_LEN {{ PASS_MIN_LEN }}
+PASS_WARN_AGE {{ PASS_WARN_AGE }}
 
 #
 # Min/max values for automatic uid selection in useradd
@@ -61,7 +61,7 @@ CREATE_HOME	yes
 
 # The permission mask is initialized to this value. If not specified,
 # the permission mask will be initialized to 022.
-UMASK           077
+UMASK 077
 
 # This enables userdel to remove user groups if no members exist.
 #
@@ -72,4 +72,4 @@ ENCRYPT_METHOD SHA512
 
 MD5_CRYPT_ENAB no
 
-FAIL_DELAY          {{ FAIL_DELAY }}
+FAIL_DELAY {{ FAIL_DELAY }}

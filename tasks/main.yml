@@ -323,15 +323,15 @@
 - name: ensure gpgcheck is activated on repository metadata
   lineinfile:
     path: /etc/yum.conf
-    regexp: "^repo_gpgcheck="
-    line: "repo_gpgcheck={{ repo_gpgcheck }}"
+    regexp: "^repo_gpgcheck"
+    line: "repo_gpgcheck = {{ repo_gpgcheck }}"
     state: present
 
 - name: ensure gpgcheck is globally activated
   lineinfile:
     path: /etc/yum.conf
-    regexp: "^gpgcheck="
-    line: "gpgcheck={{ gpgcheck }}"
+    regexp: "^gpgcheck"
+    line: "gpgcheck = {{ gpgcheck }}"
     state: present
 
 - name: find all yum repositories
@@ -346,20 +346,20 @@
     create: true
     dest: "{{ item.path }}"
     regexp: '^gpgcheck'
-    line: 'gpgcheck=1'
+    line: 'gpgcheck = 1'
 
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
     path: /etc/yum.conf
     regexp: "^localpkg_gpgcheck"
-    line: "localpkg_gpgcheck={{ localpkg_gpgcheck }}"
+    line: "localpkg_gpgcheck = {{ localpkg_gpgcheck }}"
     state: present
 
 - name: ensure yum removes previous package versions
   lineinfile:
     dest: /etc/yum.conf
     regexp: ^#?clean_requirements_on_remove
-    line: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
+    line: "clean_requirements_on_remove = {{ clean_requirements_on_remove }}"
     insertafter: '\[main\]'
 
 - name: ensure core dumps are restricted
@@ -375,7 +375,7 @@
     state: present
     dest: /etc/security/limits.conf
     regexp: '^#?\\*.*maxlogins'
-    line: '* hard maxlogins 10'
+    line: '*           hard    maxlogins     10'
     insertbefore: '^# End of file'
 
 - name: ensure prelink is disabled
