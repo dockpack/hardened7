@@ -223,9 +223,50 @@
       - ca-certificates
       - jq
       - screen
+      - dracut-fips
+      - aide
   tags:
     - skip_ansible_lint  # here we do want latest
     - openssh
+    - aide
+
+- name: "Build and Test AIDE Database"
+  command: /usr/sbin/aide --init
+  args:
+    creates: /var/lib/aide/aide.db.gz
+  tags:
+    - aide
+
+# mainly to allow ansible's check mode to work
+- name: "check whether the stock AIDE database exists"
+  stat:
+    path: /var/lib/aide/aide.db.new.gz
+  register: aide_database_stat
+  tags:
+    - aide
+
+- name: "stage AIDE database"
+  copy:
+    src: /var/lib/aide/aide.db.new.gz
+    dest: /var/lib/aide/aide.db.gz
+    backup: true
+    remote_src: true
+  when:
+    - aide_database_stat.stat.exists is defined
+    - aide_database_stat.stat.exists
+  tags:
+    - aide
+
+- name: "configure periodic execution of AIDE"
+  cron:
+    name: "run AIDE check"
+    minute: 05
+    hour: 04
+    weekday: 0
+    user: root
+    job: "/usr/sbin/aide --check"
+  tags:
+    - aide
 
 - name: manage direct root login device
   copy:
@@ -309,7 +350,9 @@
     enabled: false
     state: stopped
   register: service_result
-  failed_when: "service_result is failed and ('Could not find the requested service' not in service_result.msg)"
+  failed_when:
+    - service_result is failed
+    - "'Could not find the requested service' not in service_result.msg"
   ignore_errors: true
 
 - name: manage kernel parameters
@@ -403,6 +446,13 @@
     dest: /etc/selinux/config
     regexp: '^SELINUXTYPE.*'
     line: 'SELINUXTYPE={{ SELINUXTYPE }}'
+    state: present
+
+- name: set CtrlAltDelBurstAction=none
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^(#)?CtrlAltDelBurstAction'
+    line: 'CtrlAltDelBurstAction=none'
     state: present
 
 - name: restrict permissions on logfile
