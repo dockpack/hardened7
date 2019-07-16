@@ -320,7 +320,7 @@
     group: root
   notify: reload kernel parameters
 
-- name: ensure gpgcheck is activated on repository metadata
+- name: ensure repo_gpgcheck is activated
   lineinfile:
     path: /etc/yum.conf
     regexp: "^repo_gpgcheck"
@@ -331,7 +331,7 @@
   lineinfile:
     path: /etc/yum.conf
     regexp: "^gpgcheck"
-    line: "gpgcheck = {{ gpgcheck }}"
+    line: "gpgcheck={{ gpgcheck }}"
     state: present
 
 - name: find all yum repositories
@@ -346,13 +346,13 @@
     create: true
     dest: "{{ item.path }}"
     regexp: '^gpgcheck'
-    line: 'gpgcheck = 1'
+    line: 'gpgcheck=1'
 
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
     path: /etc/yum.conf
     regexp: "^localpkg_gpgcheck"
-    line: "localpkg_gpgcheck = {{ localpkg_gpgcheck }}"
+    line: "localpkg_gpgcheck={{ localpkg_gpgcheck }}"
     state: present
 
 - name: ensure yum removes previous package versions
