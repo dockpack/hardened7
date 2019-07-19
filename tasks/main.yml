@@ -82,12 +82,6 @@
   ignore_errors: true
   notify: restart postfix
 
-- name: remove insecure daemons
-  yum:
-    name: "{{ insecure_daemons }}"
-    state: absent
-  ignore_errors: true
-
 - name: remove rsh trust files
   file:
     path: "{{ item }}"
@@ -111,23 +105,6 @@
         state: absent
       with_items: "{{ shosts_equiv_locations.files }}"
       when: shosts_equiv_locations
-
-- name: install tcp_wrappers for SSH and HTTPS
-  when: tcp_wrappers is defined and tcp_wrappers|bool
-  yum:
-    name: tcp_wrappers
-    state: present
-
-- name: install tcp_wrappers for SSH and HTTPS
-  when: tcp_wrappers is defined and tcp_wrappers|bool
-  template:
-    src: "{{ item }}"
-    dest: /etc/
-    owner: root
-    group: root
-  with_items:
-    - hosts.allow
-    - hosts.deny
 
 - name: manage kernel module loading
   copy:
@@ -205,77 +182,6 @@
     regexp: '^NOZEROCONF'
     line: 'NOZEROCONF=yes'
     state: present
-
-- name: ensure xorg-x11-server-common is removed
-  package:
-    name: xorg-x11-server-common
-    state: absent
-
-- name: update packages
-  yum:
-    state: latest
-    name:
-      - openssh
-      - openssh-clients
-      - openssh-server
-      - libsemanage-python
-      - policycoreutils-python
-      - ca-certificates
-      - jq
-      - screen
-      - dracut-fips
-      - aide
-  tags:
-    - skip_ansible_lint  # here we do want latest
-    - openssh
-    - aide
-
-- name: use FIPS 140-2 for validating hashes
-  lineinfile:
-    state: present
-    dest: /etc/aide.conf
-    regexp: '^NORMAL'
-    line: 'NORMAL = FIPSR+sha512'
-  tags:
-    - aide
-
-- name: "Build and Test AIDE Database"
-  command: /usr/sbin/aide --init
-  args:
-    creates: /var/lib/aide/aide.db.gz
-  tags:
-    - aide
-
-# mainly to allow ansible's check mode to work
-- name: "check whether the stock AIDE database exists"
-  stat:
-    path: /var/lib/aide/aide.db.new.gz
-  register: aide_database_stat
-  tags:
-    - aide
-
-- name: "stage AIDE database"
-  copy:
-    src: /var/lib/aide/aide.db.new.gz
-    dest: /var/lib/aide/aide.db.gz
-    backup: true
-    remote_src: true
-  when:
-    - aide_database_stat.stat.exists is defined
-    - aide_database_stat.stat.exists
-  tags:
-    - aide
-
-- name: "configure periodic execution of AIDE"
-  cron:
-    name: "run AIDE check"
-    minute: 05
-    hour: 04
-    weekday: 0
-    user: root
-    job: "/usr/sbin/aide --check"
-  tags:
-    - aide
 
 - name: manage direct root login device
   copy:
@@ -372,6 +278,57 @@
     group: root
   notify: reload kernel parameters
 
+- name: ensure core dumps are restricted
+  lineinfile:
+    state: present
+    dest: /etc/security/limits.conf
+    regexp: '^#?\\*.*core'
+    line: '* hard core 0'
+    insertbefore: '^# End of file'
+
+- name: limit the number of concurrent login sessions allowed per user
+  lineinfile:
+    state: present
+    dest: /etc/security/limits.conf
+    regexp: '^#?\\*.*maxlogins'
+    line: '*           hard    maxlogins     10'
+    insertbefore: '^# End of file'
+
+- name: disable useless suid and sgid commands
+  file:
+    path: "{{ item }}"
+    mode: 0755
+  ignore_errors: true
+  with_items:
+    - "{{ useless_suid_sgid }}"
+
+- name: SELinux security policy
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: '^SELINUX=.*'
+    line: 'SELINUX={{ SELINUX }}'
+    state: present
+
+- name: set SELinux type
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: '^SELINUXTYPE.*'
+    line: 'SELINUXTYPE={{ SELINUXTYPE }}'
+    state: present
+
+- name: set CtrlAltDelBurstAction=none
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^(#)?CtrlAltDelBurstAction'
+    line: 'CtrlAltDelBurstAction=none'
+    state: present
+
+- name: restrict permissions on logfile
+  file:
+    path: /var/log/dmesg
+    mode: 0640
+
+# Start yum
 - name: ensure repo_gpgcheck is activated
   when: repo_gpgcheck_global|int == 1
   lineinfile:
@@ -417,60 +374,104 @@
     line: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
     insertafter: '\[main\]'
 
-- name: ensure core dumps are restricted
-  lineinfile:
-    state: present
-    dest: /etc/security/limits.conf
-    regexp: '^#?\\*.*core'
-    line: '* hard core 0'
-    insertbefore: '^# End of file'
+- name: remove insecure daemons
+  yum:
+    name: "{{ insecure_daemons }}"
+    state: absent
+  ignore_errors: true
 
-- name: limit the number of concurrent login sessions allowed per user
+- name: install tcp_wrappers for SSH and HTTPS
+  when: tcp_wrappers is defined and tcp_wrappers|bool
+  yum:
+    name: tcp_wrappers
+    state: present
+
+- name: install tcp_wrappers for SSH and HTTPS
+  when: tcp_wrappers is defined and tcp_wrappers|bool
+  template:
+    src: "{{ item }}"
+    dest: /etc/
+    owner: root
+    group: root
+  with_items:
+    - hosts.allow
+    - hosts.deny
+
+- name: ensure xorg-x11-server-common is removed
+  package:
+    name: xorg-x11-server-common
+    state: absent
+
+- name: update packages
+  yum:
+    state: latest
+    name:
+      - openssh
+      - openssh-clients
+      - openssh-server
+      - libsemanage-python
+      - policycoreutils-python
+      - ca-certificates
+      - jq
+      - screen
+      - dracut-fips
+      - aide
+  tags:
+    - skip_ansible_lint  # here we do want latest
+    - openssh
+    - aide
+
+- name: use FIPS 140-2 for validating hashes
   lineinfile:
     state: present
-    dest: /etc/security/limits.conf
-    regexp: '^#?\\*.*maxlogins'
-    line: '*           hard    maxlogins     10'
-    insertbefore: '^# End of file'
+    dest: /etc/aide.conf
+    regexp: '^NORMAL'
+    line: 'NORMAL = FIPSR+sha512'
+  tags:
+    - aide
+
+- name: "Build and Test AIDE Database"
+  command: /usr/sbin/aide --init
+  args:
+    creates: /var/lib/aide/aide.db.gz
+  tags:
+    - aide
+
+# mainly to allow ansible's check mode to work
+- name: "check whether the stock AIDE database exists"
+  stat:
+    path: /var/lib/aide/aide.db.new.gz
+  register: aide_database_stat
+  tags:
+    - aide
+
+- name: "stage AIDE database"
+  copy:
+    src: /var/lib/aide/aide.db.new.gz
+    dest: /var/lib/aide/aide.db.gz
+    backup: true
+    remote_src: true
+  when:
+    - aide_database_stat.stat.exists is defined
+    - aide_database_stat.stat.exists
+  tags:
+    - aide
+
+- name: "configure periodic execution of AIDE"
+  cron:
+    name: "run AIDE check"
+    minute: 05
+    hour: 04
+    weekday: 0
+    user: root
+    job: "/usr/sbin/aide --check"
+  tags:
+    - aide
 
 - name: ensure prelink is disabled
   yum:
     name: prelink
     state: absent
-
-- name: disable useless suid and sgid commands
-  file:
-    path: "{{ item }}"
-    mode: 0755
-  ignore_errors: true
-  with_items:
-    - "{{ useless_suid_sgid }}"
-
-- name: SELinux security policy
-  lineinfile:
-    dest: /etc/selinux/config
-    regexp: '^SELINUX=.*'
-    line: 'SELINUX={{ SELINUX }}'
-    state: present
-
-- name: set SELinux type
-  lineinfile:
-    dest: /etc/selinux/config
-    regexp: '^SELINUXTYPE.*'
-    line: 'SELINUXTYPE={{ SELINUXTYPE }}'
-    state: present
-
-- name: set CtrlAltDelBurstAction=none
-  lineinfile:
-    dest: /etc/systemd/system.conf
-    regexp: '^(#)?CtrlAltDelBurstAction'
-    line: 'CtrlAltDelBurstAction=none'
-    state: present
-
-- name: restrict permissions on logfile
-  file:
-    path: /var/log/dmesg
-    mode: 0640
 
 - name: disable sebooleans that should be disabled
   seboolean:
