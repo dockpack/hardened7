@@ -373,32 +373,35 @@
   notify: reload kernel parameters
 
 - name: ensure repo_gpgcheck is activated
+  when: repo_gpgcheck_global|int == 1
   lineinfile:
     path: /etc/yum.conf
     regexp: "^repo_gpgcheck"
-    line: "repo_gpgcheck = {{ repo_gpgcheck }}"
+    line: "repo_gpgcheck = {{ repo_gpgcheck_global }}"
     state: present
 
-- name: ensure gpgcheck is globally activated
+- name: lininfile if gpgcheck should be globally activated
   lineinfile:
     path: /etc/yum.conf
     regexp: "^gpgcheck"
-    line: "gpgcheck={{ gpgcheck }}"
+    line: "gpgcheck={{ gpgcheck_global }}"
     state: present
 
 - name: find all yum repositories
+  when: gpgcheck_all_repos|int == 1
   find:
     paths: "/etc/yum.repos.d/"
     patterns: "*.repo"
   register: yum_find
 
-- name: ensure gpgcheck enabled for all yum package repositories
+- name: enable gpgcheck for all yum package repositories
+  when: gpgcheck_all_repos|int == 1
   with_items: "{{ yum_find.files }}"
   lineinfile:
     create: true
     dest: "{{ item.path }}"
     regexp: '^gpgcheck'
-    line: 'gpgcheck=1'
+    line: "gpgcheck={{ gpgcheck_all_repos }}"
 
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
@@ -411,7 +414,7 @@
   lineinfile:
     dest: /etc/yum.conf
     regexp: ^#?clean_requirements_on_remove
-    line: "clean_requirements_on_remove = {{ clean_requirements_on_remove }}"
+    line: "clean_requirements_on_remove={{ clean_requirements_on_remove }}"
     insertafter: '\[main\]'
 
 - name: ensure core dumps are restricted
