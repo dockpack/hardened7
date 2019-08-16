@@ -1,6 +1,6 @@
 ---
 disable_ipv6: true
-
+use_aide: true
 tcp_wrappers: true
 tcp_wrappers_deny: 'ALL:ALL'
 tcp_wrappers_allow: ''
