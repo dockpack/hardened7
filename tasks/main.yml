@@ -380,7 +380,7 @@
     line: "repo_gpgcheck = {{ repo_gpgcheck_global }}"
     state: present
 
-- name: lininfile if gpgcheck should be globally activated
+- name: lineinfile if gpgcheck should be globally activated
   lineinfile:
     path: /etc/yum.conf
     regexp: "^gpgcheck"
