@@ -422,6 +422,7 @@
     - aide
 
 - name: use FIPS 140-2 for validating hashes
+  when: use_aide|bool
   lineinfile:
     state: present
     dest: /etc/aide.conf
@@ -431,6 +432,7 @@
     - aide
 
 - name: "Build and Test AIDE Database"
+  when: use_aide|bool
   command: /usr/sbin/aide --init
   args:
     creates: /var/lib/aide/aide.db.gz
@@ -439,6 +441,7 @@
 
 # mainly to allow ansible's check mode to work
 - name: "check whether the stock AIDE database exists"
+  when: use_aide|bool
   stat:
     path: /var/lib/aide/aide.db.new.gz
   register: aide_database_stat
@@ -452,12 +455,14 @@
     backup: true
     remote_src: true
   when:
+    - use_aide|bool
     - aide_database_stat.stat.exists is defined
     - aide_database_stat.stat.exists
   tags:
     - aide
 
 - name: "configure periodic execution of AIDE"
+  when: use_aide|bool
   cron:
     name: "run AIDE check"
     minute: 05
