@@ -465,9 +465,9 @@
   when: use_aide|bool
   cron:
     name: "run AIDE check"
-    minute: 05
-    hour: 04
-    weekday: 0
+    minute: '05'
+    hour: '04'
+    weekday: '0'
     user: root
     job: "/usr/sbin/aide --check"
   tags:
