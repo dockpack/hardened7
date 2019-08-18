@@ -1,2 +1,2 @@
 # {{ ansible_managed }}
-ALL:ALL
+{{ tcp_wrappers_deny }}
