@@ -106,21 +106,34 @@
       with_items: "{{ shosts_equiv_locations.files }}"
       when: shosts_equiv_locations
 
-- name: manage kernel module loading
+## Kernel
+- name: manage_kernel module loading
+  when: manage_kernel|bool
   copy:
     src: disabled.conf
     dest: /etc/modprobe.d/disabled.conf
     owner: root
     group: root
 
-- name: manage kernel modules
+- name: manage_kernel modules
+  when: manage_kernel|bool
   copy:
     src: modprobe.conf
     dest: /etc/modprobe.d/CIS.conf
     owner: root
     group: root
 
-- name: manage kernel options
+- name: manage_kernel parameters
+  when: manage_kernel|bool
+  template:
+    src: 99-sysctl.conf.j2
+    dest: /etc/sysctl.d/99-sysctl.conf
+    owner: root
+    group: root
+  notify: reload kernel parameters
+
+## ipv6
+- name: disable ipv6 in kernel
   when: disable_ipv6 is defined and disable_ipv6|bool
   copy:
     src: "{{ item }}"
@@ -129,6 +142,8 @@
     group: root
   with_items:
     - disabled.conf
+  tags:
+    - disable_ipv6
 
 - name: disable interface usage of ipv6
   when: disable_ipv6 is defined and disable_ipv6|bool
@@ -137,7 +152,49 @@
     regexp: '^NETWORKING_IPV6'
     line: 'NETWORKING_IPV6=no'
     state: present
+  tags:
+    - disable_ipv6
 
+- name: disable interface usage of ipv6
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/sysconfig/network
+    regexp: '^IPV6INIT'
+    line: 'IPV6INIT=no'
+    state: present
+  tags:
+    - disable_ipv6
+
+- name: check if libtirpc confile file is present
+  stat:
+    path: /etc/netconfig
+  register: netconfig
+  tags:
+    - disable_ipv6
+
+- name: disable support for rpc udp6
+  when:
+    - netconfig.stat.exists
+    - disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/netconfig
+    regexp: 'udp6'
+    line: '# udp6       tpi_clts      v     inet6    udp     -       -'
+    state: present
+  tags:
+    - disable_ipv6
+
+- name: disable support for rpc ipv6
+  when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/netconfig
+    regexp: 'tcp6'
+    line: '# tcp6       tpi_cots_ord  v     inet6    tcp     -       -'
+    state: present
+  tags:
+    - disable_ipv6
+
+## Network
 - name: Increase DNS query attempts
   lineinfile:
     path: /etc/sysconfig/network
@@ -147,35 +204,6 @@
   tags:
     - dnsconfig
 
-- name: disable interface usage of ipv6
-  when: disable_ipv6 is defined and disable_ipv6|bool
-  lineinfile:
-    dest: /etc/sysconfig/network
-    regexp: '^IPV6INIT'
-    line: 'IPV6INIT=no'
-    state: present
-
-- name: check if libtirpc confile file is present
-  stat:
-    path: /etc/netconfig
-  register: netconfig
-
-- name: disable support for rpc udp6
-  when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
-  lineinfile:
-    dest: /etc/netconfig
-    regexp: 'udp6'
-    line: '# udp6       tpi_clts      v     inet6    udp     -       -'
-    state: present
-
-- name: disable support for rpc ipv6
-  when: netconfig.stat.exists and disable_ipv6 is defined and disable_ipv6|bool
-  lineinfile:
-    dest: /etc/netconfig
-    regexp: 'tcp6'
-    line: '# tcp6       tpi_cots_ord  v     inet6    tcp     -       -'
-    state: present
-
 - name: disable zeroconf networking
   lineinfile:
     dest: /etc/sysconfig/network
@@ -183,6 +211,7 @@
     line: 'NOZEROCONF=yes'
     state: present
 
+## Logon
 - name: manage direct root login device
   copy:
     content: tty1
@@ -192,6 +221,7 @@
     mode: 0600
 
 - name: ensure the logon.defs are set
+  when: manage_password_compliance|bool
   template:
     src: login.defs.j2
     dest: /etc/login.defs
@@ -200,7 +230,9 @@
     mode: 0644
 
 - name: create the password policy file
-  when: pwquality is defined and pwquality|bool
+  when:
+    - manage_password_compliance|bool
+    - pwquality is defined and pwquality|bool
   template:
     src: pwquality.conf.j2
     dest: /etc/security/pwquality.conf
@@ -209,18 +241,56 @@
     mode: 0644
 
 - name: set account expiration following inactivity
+  when: manage_password_compliance|bool
   lineinfile:
     state: present
     dest: /etc/default/useradd
     regexp: '^INACTIVE='
     line: 'INACTIVE=0'
 
+- name: set password hashing algorithm in /etc/libuser.conf
+  lineinfile:
+    state: present
+    dest: /etc/libuser.conf
+    regexp: '^crypt_style'
+    line: 'crypt_style = sha512'
+
+- name: prevent log in to accounts with empty password - system-auth
+  when:
+    - manage_password_compliance|bool
+    - password_required is defined and password_required|bool
+  replace:
+    dest: /etc/pam.d/system-auth
+    follow: true
+    regexp: 'nullok'
+
+- name: prevent log in to accounts with empty password - password-auth
+  when:
+    - manage_password_compliance|bool
+    - password_required is defined and password_required|bool
+  replace:
+    dest: /etc/pam.d/password-auth
+    follow: true
+    regexp: 'nullok'
+
+- name: clear interactive session timeout
+  when: not manage_timeout|bool
+  lineinfile:
+    state: absent
+    dest: /etc/profile
+    regexp: '^TMOUT='
+  tags:
+    - manage_timeout
+
 - name: set interactive session timeout
+  when: manage_timeout|bool
   lineinfile:
     state: present
     dest: /etc/profile
     regexp: '^TMOUT='
     line: 'TMOUT={{ TMOUT }}'
+  tags:
+    - manage_timeout
 
 - name: Setup bash command history timestamps
   template:
@@ -231,27 +301,6 @@
     mode: 0644
   tags:
     - bash_history
-
-- name: set password hashing algorithm in /etc/libuser.conf
-  lineinfile:
-    state: present
-    dest: /etc/libuser.conf
-    regexp: '^crypt_style'
-    line: 'crypt_style = sha512'
-
-- name: prevent log in to accounts with empty password - system-auth
-  when: password_required is defined and password_required|bool
-  replace:
-    dest: /etc/pam.d/system-auth
-    follow: true
-    regexp: 'nullok'
-
-- name: prevent log in to accounts with empty password - password-auth
-  when: password_required is defined and password_required|bool
-  replace:
-    dest: /etc/pam.d/password-auth
-    follow: true
-    regexp: 'nullok'
 
 - name: disable ctrl-alt-del reboot activation, please auditors
   file:
@@ -270,14 +319,7 @@
     - "'Could not find the requested service' not in service_result.msg"
   ignore_errors: true
 
-- name: manage kernel parameters
-  template:
-    src: 99-sysctl.conf.j2
-    dest: /etc/sysctl.d/99-sysctl.conf
-    owner: root
-    group: root
-  notify: reload kernel parameters
-
+## Limits
 - name: ensure core dumps are restricted
   lineinfile:
     state: present
@@ -295,6 +337,7 @@
     insertbefore: '^# End of file'
 
 - name: disable useless suid and sgid commands
+  when: manage_suid_binaries|bool
   file:
     path: "{{ item }}"
     mode: 0755
@@ -328,7 +371,7 @@
     path: /var/log/dmesg
     mode: 0640
 
-# Start yum
+# Yum
 - name: ensure repo_gpgcheck is activated
   when: repo_gpgcheck_global|int == 1
   lineinfile:
@@ -380,6 +423,7 @@
     state: absent
   ignore_errors: true
 
+# TCP Wrappers
 - name: install tcp_wrappers for SSH and HTTPS
   when: tcp_wrappers is defined and tcp_wrappers|bool
   yum:
@@ -397,6 +441,7 @@
     - hosts.allow
     - hosts.deny
 
+## XWindows
 - name: ensure xorg-x11-server-common is removed
   package:
     name: xorg-x11-server-common
@@ -421,6 +466,7 @@
     - openssh
     - aide
 
+## AIDE
 - name: use FIPS 140-2 for validating hashes
   when: use_aide|bool
   lineinfile:
@@ -478,13 +524,14 @@
     name: prelink
     state: absent
 
+## Sebooleans
 - name: disable sebooleans that should be disabled
   seboolean:
     name: "{{ item }}"
     state: false
     persistent: true
   with_items: "{{ selinux_booleans_disable }}"
-  when: ansible_selinux.status == "enabled"
+  when: SELINUX == "enforcing" and manage_sebooleans|bool
 
 - name: enable sebooleans that should be enabled
   seboolean:
@@ -492,4 +539,4 @@
     state: true
     persistent: true
   with_items: "{{ selinux_booleans_enable }}"
-  when: ansible_selinux.status == "enabled"
+  when: SELINUX == "enforcing" and manage_sebooleans|bool
