@@ -1,4 +1,10 @@
 ---
+manage_kernel: false
+manage_password_compliance: false
+manage_timeout: false
+manage_suid_binaries: false
+manage_sebooleans: true
+
 disable_ipv6: true
 use_aide: true
 tcp_wrappers: true
