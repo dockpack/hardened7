@@ -145,6 +145,15 @@
   tags:
     - disable_ipv6
 
+- name: Optional SSH configuration
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^(#)?AddressFamily'
+    line: 'AddressFamily inet'
+    state: present
+  notify: restart sshd
+
 - name: disable interface usage of ipv6
   when: disable_ipv6 is defined and disable_ipv6|bool
   lineinfile:
