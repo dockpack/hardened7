@@ -223,7 +223,7 @@
 ## Logon
 - name: manage direct root login device
   copy:
-    content: tty1
+    content: ttyS0
     dest: /etc/securetty
     owner: root
     group: root
