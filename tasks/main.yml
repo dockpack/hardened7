@@ -107,14 +107,6 @@
       when: shosts_equiv_locations
 
 ## Kernel
-- name: manage_kernel module loading
-  when: manage_kernel|bool
-  copy:
-    src: disabled.conf
-    dest: /etc/modprobe.d/disabled.conf
-    owner: root
-    group: root
-
 - name: manage_kernel modules
   when: manage_kernel|bool
   copy:
