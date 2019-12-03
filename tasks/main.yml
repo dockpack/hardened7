@@ -24,7 +24,7 @@
     name: rpcbind.service
     state: stopped
     enabled: false
-  ignore_errors: true
+  failed_when: false
 
 - name: configure mail transfer agent for local-only mode
   lineinfile:
