@@ -57,7 +57,7 @@ password_required: true
 
 # /etc/yum.conf
 repo_gpgcheck_global: 0
-gpgcheck_global: 0
+gpgcheck_global: 1
 gpgcheck_all_repos: 0
 localpkg_gpgcheck: 1
 clean_requirements_on_remove: 1
