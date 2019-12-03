@@ -13,16 +13,6 @@ tcp_wrappers_allow: ''
 tcp_wrappers_ssh: ALL
 tcp_wrappers_https: ALL
 
-useless_suid_sgid:
-  - /usr/bin/wall
-  - /usr/bin/chfn
-  - /usr/bin/chsh
-  - /usr/bin/newgrp
-  - /usr/bin/gpasswd
-  - /usr/bin/pkexec
-  - /usr/bin/write
-  - /usr/sbin/usernetctl
-
 insecure_daemons:
   - avahi
   - bind

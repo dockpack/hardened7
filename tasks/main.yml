@@ -337,15 +337,6 @@
     line: '*           hard    maxlogins     10'
     insertbefore: '^# End of file'
 
-- name: disable useless suid and sgid commands
-  when: manage_suid_binaries|bool
-  file:
-    path: "{{ item }}"
-    mode: 0755
-  ignore_errors: true
-  with_items:
-    - "{{ useless_suid_sgid }}"
-
 - name: SELinux security policy
   lineinfile:
     dest: /etc/selinux/config
