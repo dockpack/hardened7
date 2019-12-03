@@ -555,4 +555,6 @@
 - name: "Verify grub.cfg Permissions"
   file:
     path: /boot/grub2/grub.cfg
+    owner: root
+    group: root
     mode: 0600
