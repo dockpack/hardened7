@@ -541,3 +541,15 @@
     persistent: true
   with_items: "{{ selinux_booleans_enable }}"
   when: SELINUX == "enforcing" and manage_sebooleans|bool
+
+- name: "Read list of files with incorrect permissions"
+  shell: "rpm -Va | grep '^.M' | sed -r 's;^.*\\s+(.+);\\1;g'"
+  register: files_with_incorrect_permissions
+  failed_when: false
+  changed_when: false
+
+- name: "Correct file permissions with RPM"
+  shell: "rpm --setperms $(rpm -qf '{{item}}')"
+  with_items: "{{ files_with_incorrect_permissions.stdout_lines }}"
+  when: files_with_incorrect_permissions.stdout_lines | length > 0
+  failed_when: false
