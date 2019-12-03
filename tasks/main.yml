@@ -320,7 +320,14 @@
     - "'Could not find the requested service' not in service_result.msg"
   ignore_errors: true
 
-## Limits
+- name: manage kernel parameters
+  template:
+    src: 999-sysctl.conf.j2
+    dest: /etc/sysctl.d/999-sysctl.conf
+    owner: root
+    group: root
+  notify: reload kernel parameters
+
 - name: ensure core dumps are restricted
   lineinfile:
     state: present
@@ -544,3 +551,8 @@
   with_items: "{{ files_with_incorrect_permissions.stdout_lines }}"
   when: files_with_incorrect_permissions.stdout_lines | length > 0
   failed_when: false
+
+- name: "Verify grub.cfg Permissions"
+  file:
+    path: /boot/grub2/grub.cfg
+    mode: 0600
