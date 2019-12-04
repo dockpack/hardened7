@@ -548,7 +548,7 @@
   changed_when: false
 
 - name: "Correct file permissions with RPM"
-  shell: "rpm --setperms $(rpm -qf '{{item}}')"
+  shell: "rpm --setperms $(rpm -qf '{{ item }}')"
   with_items: "{{ files_with_incorrect_permissions.stdout_lines }}"
   when: files_with_incorrect_permissions.stdout_lines | length > 0
   failed_when: false
