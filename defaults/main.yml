@@ -41,6 +41,11 @@ insecure_daemons:
 # interactive session timeout
 TMOUT: 600
 
+pam_manage: true
+# Ban time after failed logon
+pam_faillock_unlock_time: 1800
+pam_faillock_deny: 6
+pam_unix_remember: 4
 # Allow direct root login on these tty's
 securetty: ''
 
