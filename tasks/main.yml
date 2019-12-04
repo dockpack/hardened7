@@ -565,3 +565,7 @@
     owner: root
     group: root
     mode: 0600
+
+- name: "Security patches are up to date"
+  package:
+    name: "*"
