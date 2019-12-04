@@ -215,7 +215,7 @@
 ## Logon
 - name: manage direct root login device
   copy:
-    content: ttyS0
+    content: "{{ securetty }}"
     dest: /etc/securetty
     owner: root
     group: root
