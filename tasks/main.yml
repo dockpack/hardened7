@@ -543,12 +543,18 @@
 
 - name: "Read list of files with incorrect permissions"
   shell: "rpm -Va | grep '^.M' | sed -r 's;^.*\\s+(.+);\\1;g'"
+  args:
+    warn: false
   register: files_with_incorrect_permissions
   failed_when: false
   changed_when: false
+  tags:
+    - skip_ansible_lint  # C2S Openscap content
 
 - name: "Correct file permissions with RPM"
   shell: "rpm --setperms $(rpm -qf '{{ item }}')"
+  args:
+    warn: false
   with_items: "{{ files_with_incorrect_permissions.stdout_lines }}"
   when: files_with_incorrect_permissions.stdout_lines | length > 0
   failed_when: false
