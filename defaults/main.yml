@@ -41,6 +41,9 @@ insecure_daemons:
 # interactive session timeout
 TMOUT: 600
 
+# Allow direct root login on these tty's
+securetty: ''
+
 # create password policy
 pwquality: true
 password_required: true
