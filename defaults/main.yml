@@ -50,8 +50,10 @@ password_required: true
 
 # /etc/yum.conf
 repo_gpgcheck_global: 0
+# Standard C2S baseline
 gpgcheck_global: 1
-gpgcheck_all_repos: 0
+# PCI-DSS
+gpgcheck_all_repos: 1
 localpkg_gpgcheck: 1
 clean_requirements_on_remove: 1
 
