@@ -274,6 +274,20 @@
     follow: true
     regexp: 'nullok'
 
+- name: 'Do not allow users to reuse recent passwords - system-auth (change)'
+  replace:
+    dest: /etc/pam.d/system-auth
+    follow: yes
+    regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
+    replace: '\g<1>{{ pam_unix_remember }}\g<3>'
+
+- name: 'Do not allow users to reuse recent passwords - system-auth (add)'
+  replace:
+    dest: /etc/pam.d/system-auth
+    follow: yes
+    regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
+    replace: '\g<0> remember={{ pam_unix_remember }}'
+
 - name: clear interactive session timeout
   when: not manage_timeout|bool
   lineinfile:
@@ -409,16 +423,17 @@
   find:
     paths: "/etc/yum.repos.d/"
     patterns: "*.repo"
+    contains: ^\[.+]$
   register: yum_find
 
 - name: enable gpgcheck for all yum package repositories
   when: gpgcheck_all_repos|int == 1
-  with_items: "{{ yum_find.files }}"
   lineinfile:
     create: true
     dest: "{{ item.path }}"
-    regexp: '^gpgcheck'
-    line: "gpgcheck={{ gpgcheck_all_repos }}"
+    regexp: '^gpgcheck=0'
+    state: absent
+  with_items: "{{ yum_find.files }}"
 
 - name: ensure gpgcheck is activated for local packages
   lineinfile:
@@ -464,14 +479,15 @@
     name: xorg-x11-server-common
     state: absent
 
-- name: update packages
+- name: install security packages
   yum:
-    state: latest
+    state: present
     name:
       - openssh
       - openssh-clients
       - openssh-server
       - libsemanage-python
+      - libreswan
       - policycoreutils-python
       - ca-certificates
       - jq
@@ -479,7 +495,6 @@
       - dracut-fips
       - aide
   tags:
-    - skip_ansible_lint  # here we do want latest
     - openssh
     - aide
 
@@ -541,6 +556,166 @@
   yum:
     name: prelink
     state: absent
+
+- name: Add auth pam_faillock preauth unlock_time before pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_faillock.so
+    module_arguments: 'preauth
+        silent
+        unlock_time={{ pam_faillock_unlock_time }}'
+    state: before
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add unlock_time argument to pam_faillock preauth
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: 'preauth
+        silent
+        unlock_time={{ pam_faillock_unlock_time }}'
+    state: args_present
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add auth pam_faillock authfail unlock_interval after pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: 'authfail
+        unlock_time={{ pam_faillock_unlock_time }}'
+    state: after
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add unlock_time argument to auth pam_faillock authfail
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: 'authfail
+        unlock_time={{ pam_faillock_unlock_time }}'
+    state: args_present
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add account pam_faillock before pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: account
+    control: required
+    module_path: pam_unix.so
+    new_type: account
+    new_control: required
+    new_module_path: pam_faillock.so
+    state: before
+  loop:
+    - system-auth
+    - password-auth
+##
+
+- name: Add auth pam_faillock preauth deny before pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_faillock.so
+    module_arguments: 'preauth
+        silent
+        deny={{ pam_faillock_deny }}'
+    state: before
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add deny argument to auth pam_faillock preauth
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: 'preauth
+        silent
+        deny={{ pam_faillock_deny }}'
+    state: args_present
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add auth pam_faillock authfail deny after pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: 'authfail
+        deny={{ pam_faillock_deny }}'
+    state: after
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add deny argument to auth pam_faillock authfail
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    new_type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: 'authfail
+        deny={{ pam_faillock_deny }}'
+    state: args_present
+  loop:
+    - system-auth
+    - password-auth
+
+- name: Add account pam_faillock before pam_unix.so
+  when: pam_manage|bool
+  pamd:
+    name: "{{ item }}"
+    type: account
+    control: required
+    module_path: pam_unix.so
+    new_type: account
+    new_control: required
+    new_module_path: pam_faillock.so
+    state: before
+  loop:
+    - system-auth
+    - password-auth
 
 ## Sebooleans
 - name: disable sebooleans that should be disabled
