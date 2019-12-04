@@ -370,6 +370,24 @@
     path: /var/log/dmesg
     mode: 0640
 
+- name: set logrotate interval to daily
+  lineinfile:
+    dest: /etc/logrotate.conf
+    regexp: '^weekly'
+    line: "daily"
+    backrefs: yes
+  tags:
+    - logrotate
+
+- name: set logrotate retention period to 7 days
+  lineinfile:
+    dest: /etc/logrotate.conf
+    regexp: '^rotate 4'
+    line: "rotate 7"
+    backrefs: yes
+  tags:
+    - logrotate
+
 # Yum
 - name: ensure repo_gpgcheck is activated
   when: repo_gpgcheck_global|int == 1
