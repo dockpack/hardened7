@@ -13,16 +13,6 @@ tcp_wrappers_allow: ''
 tcp_wrappers_ssh: ALL
 tcp_wrappers_https: ALL
 
-useless_suid_sgid:
-  - /usr/bin/wall
-  - /usr/bin/chfn
-  - /usr/bin/chsh
-  - /usr/bin/newgrp
-  - /usr/bin/gpasswd
-  - /usr/bin/pkexec
-  - /usr/bin/write
-  - /usr/sbin/usernetctl
-
 insecure_daemons:
   - avahi
   - bind
@@ -57,7 +47,7 @@ password_required: true
 
 # /etc/yum.conf
 repo_gpgcheck_global: 0
-gpgcheck_global: 0
+gpgcheck_global: 1
 gpgcheck_all_repos: 0
 localpkg_gpgcheck: 1
 clean_requirements_on_remove: 1

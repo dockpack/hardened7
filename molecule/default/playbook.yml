@@ -5,5 +5,4 @@
   vars:
     mydomain: github.com
   roles:
-    - role: base_epel
     - role: hardened7

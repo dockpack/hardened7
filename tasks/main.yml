@@ -24,7 +24,7 @@
     name: rpcbind.service
     state: stopped
     enabled: false
-  ignore_errors: true
+  failed_when: false
 
 - name: configure mail transfer agent for local-only mode
   lineinfile:
@@ -107,14 +107,6 @@
       when: shosts_equiv_locations
 
 ## Kernel
-- name: manage_kernel module loading
-  when: manage_kernel|bool
-  copy:
-    src: disabled.conf
-    dest: /etc/modprobe.d/disabled.conf
-    owner: root
-    group: root
-
 - name: manage_kernel modules
   when: manage_kernel|bool
   copy:
@@ -144,6 +136,15 @@
     - disabled.conf
   tags:
     - disable_ipv6
+
+- name: Optional SSH configuration
+  when: disable_ipv6 is defined and disable_ipv6|bool
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^(#)?AddressFamily'
+    line: 'AddressFamily inet'
+    state: present
+  notify: restart sshd
 
 - name: disable interface usage of ipv6
   when: disable_ipv6 is defined and disable_ipv6|bool
@@ -214,7 +215,7 @@
 ## Logon
 - name: manage direct root login device
   copy:
-    content: tty1
+    content: ttyS0
     dest: /etc/securetty
     owner: root
     group: root
@@ -319,7 +320,14 @@
     - "'Could not find the requested service' not in service_result.msg"
   ignore_errors: true
 
-## Limits
+- name: manage kernel parameters
+  template:
+    src: 999-sysctl.conf.j2
+    dest: /etc/sysctl.d/999-sysctl.conf
+    owner: root
+    group: root
+  notify: reload kernel parameters
+
 - name: ensure core dumps are restricted
   lineinfile:
     state: present
@@ -335,15 +343,6 @@
     regexp: '^#?\\*.*maxlogins'
     line: '*           hard    maxlogins     10'
     insertbefore: '^# End of file'
-
-- name: disable useless suid and sgid commands
-  when: manage_suid_binaries|bool
-  file:
-    path: "{{ item }}"
-    mode: 0755
-  ignore_errors: true
-  with_items:
-    - "{{ useless_suid_sgid }}"
 
 - name: SELinux security policy
   lineinfile:
@@ -380,7 +379,7 @@
     line: "repo_gpgcheck = {{ repo_gpgcheck_global }}"
     state: present
 
-- name: lininfile if gpgcheck should be globally activated
+- name: lineinfile if gpgcheck should be globally activated
   lineinfile:
     path: /etc/yum.conf
     regexp: "^gpgcheck"
@@ -510,10 +509,11 @@
 - name: "configure periodic execution of AIDE"
   when: use_aide|bool
   cron:
+    cron_file: /etc/crontab
     name: "run AIDE check"
     minute: '05'
     hour: '04'
-    weekday: '0'
+    weekday: '*'
     user: root
     job: "/usr/sbin/aide --check"
   tags:
@@ -540,3 +540,28 @@
     persistent: true
   with_items: "{{ selinux_booleans_enable }}"
   when: SELINUX == "enforcing" and manage_sebooleans|bool
+
+- name: "Read list of files with incorrect permissions"
+  shell: "rpm -Va | grep '^.M' | sed -r 's;^.*\\s+(.+);\\1;g'"
+  args:
+    warn: false
+  register: files_with_incorrect_permissions
+  failed_when: false
+  changed_when: false
+  tags:
+    - skip_ansible_lint  # C2S Openscap content
+
+- name: "Correct file permissions with RPM"
+  shell: "rpm --setperms $(rpm -qf '{{ item }}')"
+  args:
+    warn: false
+  with_items: "{{ files_with_incorrect_permissions.stdout_lines }}"
+  when: files_with_incorrect_permissions.stdout_lines | length > 0
+  failed_when: false
+
+- name: "Verify grub.cfg Permissions"
+  file:
+    path: /boot/grub2/grub.cfg
+    owner: root
+    group: root
+    mode: 0600
