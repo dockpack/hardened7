@@ -249,6 +249,25 @@
     regexp: '^INACTIVE='
     line: 'INACTIVE=0'
 
+# we use only authorized_keys, this hack is for CIS compliance
+- name: update the password changed date
+  shell: >
+    set -o pipefail; \
+    for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
+      do chage -d today $user; \
+    done
+  tags:
+    - chage
+
+- name: ensure minimum days between password changes is 7 or more
+  shell: >
+    set -o pipefail; \
+    for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
+      do chage --mindays 7 $user; \
+    done
+  tags:
+    - chage
+
 - name: set password hashing algorithm in /etc/libuser.conf
   lineinfile:
     state: present
