@@ -753,6 +753,7 @@
   failed_when: false
 
 - name: "Verify grub.cfg Permissions"
+- name: "Verify grub.cfg permissions"
   file:
     path: /boot/grub2/grub.cfg
     owner: root
