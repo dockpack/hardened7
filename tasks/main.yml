@@ -689,6 +689,21 @@
     - system-auth
     - password-auth
 
+- name: Ensure access to the su command is restricted
+  when: pam_manage|bool
+  pamd:
+    name: su
+    type: auth
+    control: sufficient
+    module_path: pam_rootok.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_wheel.so
+    module_arguments: 'use_uid'
+    state: after
+  tags:
+    - restrict_su
+
 - name: Add auth pam_faillock authfail deny after pam_unix.so
   when: pam_manage|bool
   pamd:
