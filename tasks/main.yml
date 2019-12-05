@@ -760,6 +760,20 @@
     group: root
     mode: 0600
 
+- name: "Verify /etc/passwd- permissions"
+  file:
+    path: /etc/group-
+    owner: root
+    group: root
+    mode: 0600
+
+- name: "Verify /etc/group- permissions"
+  file:
+    path: /etc/group-
+    owner: root
+    group: root
+    mode: 0600
+
 - name: "Security patches are up to date"
   package:
     name: "*"
