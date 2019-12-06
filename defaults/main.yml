@@ -1,6 +1,6 @@
 ---
 manage_kernel: false
-manage_password_compliance: false
+manage_password_compliance: true
 manage_timeout: false
 manage_suid_binaries: false
 manage_sebooleans: true

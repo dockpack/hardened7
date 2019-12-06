@@ -253,10 +253,33 @@
     state: present
     dest: /etc/default/useradd
     regexp: '^INACTIVE='
-    line: 'INACTIVE=0'
+    line: 'INACTIVE=30'
+  tags:
+    - chage
+
+- name: ensure minimum days between password changes is 7 or more
+  when: manage_password_compliance|bool
+  shell: >
+    set -o pipefail; \
+    for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
+      do chage --mindays {{ PASS_MIN_DAYS }} $user; \
+    done
+  tags:
+    - chage
+
+- name: ensure password expiration is 90 days or less
+  when: manage_password_compliance|bool
+  shell: >
+    set -o pipefail; \
+    for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
+      do chage --maxdays {{ PASS_MAX_DAYS }} $user; \
+    done
+  tags:
+    - chage
 
 # we use only authorized_keys, this hack is for CIS compliance
-- name: update the password changed date
+- name: update the password change date
+  when: manage_password_compliance|bool
   shell: >
     set -o pipefail; \
     for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
@@ -265,16 +288,8 @@
   tags:
     - chage
 
-- name: ensure minimum days between password changes is 7 or more
-  shell: >
-    set -o pipefail; \
-    for user in `grep ":x:[0-9]\{4\}" /etc/passwd|cut -d: -f1`; \
-      do chage --mindays 7 $user; \
-    done
-  tags:
-    - chage
-
 - name: set password hashing algorithm in /etc/libuser.conf
+  when: manage_password_compliance|bool
   lineinfile:
     state: present
     dest: /etc/libuser.conf
@@ -300,6 +315,7 @@
     regexp: 'nullok'
 
 - name: 'Do not allow users to reuse recent passwords - system-auth (change)'
+  when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
     follow: yes
@@ -307,6 +323,7 @@
     replace: '\g<1>{{ pam_unix_remember }}\g<3>'
 
 - name: 'Do not allow users to reuse recent passwords - system-auth (add)'
+  when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
     follow: yes
