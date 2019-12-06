@@ -220,6 +220,8 @@
     owner: root
     group: root
     mode: 0600
+  tags:
+    - permissions
 
 - name: ensure the logon.defs are set
   when: manage_password_compliance|bool
@@ -229,6 +231,8 @@
     owner: root
     group: root
     mode: 0644
+  tags:
+    - permissions
 
 - name: create the password policy file
   when:
@@ -240,6 +244,8 @@
     owner: root
     group: root
     mode: 0644
+  tags:
+    - permissions
 
 - name: set account expiration following inactivity
   when: manage_password_compliance|bool
@@ -335,6 +341,7 @@
     mode: 0644
   tags:
     - bash_history
+    - permissions
 
 - name: disable ctrl-alt-del reboot activation, please auditors
   file:
@@ -402,6 +409,8 @@
   file:
     path: /var/log/dmesg
     mode: 0640
+  tags:
+    - permissions
 
 - name: set logrotate interval to daily
   lineinfile:
@@ -786,27 +795,32 @@
   when: files_with_incorrect_permissions.stdout_lines | length > 0
   failed_when: false
 
-- name: "Verify grub.cfg Permissions"
 - name: "Verify grub.cfg permissions"
   file:
-    path: /boot/grub2/grub.cfg
+    path: '/boot/grub2/grub.cfg'
     owner: root
     group: root
     mode: 0600
+  tags:
+    - permissions
 
 - name: "Verify /etc/passwd- permissions"
   file:
-    path: /etc/group-
+    path: '/etc/passwd-'
     owner: root
     group: root
     mode: 0600
+  tags:
+    - permissions
 
 - name: "Verify /etc/group- permissions"
   file:
-    path: /etc/group-
+    path: '/etc/group-'
     owner: root
     group: root
     mode: 0600
+  tags:
+    - permissions
 
 - name: "Security patches are up to date"
   package:
