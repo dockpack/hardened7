@@ -118,8 +118,8 @@
 - name: manage_kernel parameters
   when: manage_kernel|bool
   template:
-    src: 99-sysctl.conf.j2
-    dest: /etc/sysctl.d/99-sysctl.conf
+    src: 999-sysctl.conf.j2
+    dest: /etc/sysctl.d/999-sysctl.conf
     owner: root
     group: root
   notify: reload kernel parameters
