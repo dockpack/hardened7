@@ -105,6 +105,20 @@
         state: absent
       with_items: "{{ shosts_equiv_locations.files }}"
       when: shosts_equiv_locations
+##
+
+- name: Ensure correct mount options set on /dev/shm
+  mount:
+    name: /dev/shm
+    state: mounted
+    fstype: tmpfs
+    src: '/dev/shm'
+    opts: 'rw,noexec,nosuid,nodev,seclabel'
+
+- name: Ensure correct mount options set on /dev/shm
+  command: 'mount -o remount,rw,noexec,nosuid,nodev,seclabel tmpfs /dev/shm'
+  args:
+    warn: false
 
 ## Kernel
 - name: manage_kernel modules
