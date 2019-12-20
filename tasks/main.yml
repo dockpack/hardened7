@@ -128,6 +128,8 @@
     dest: /etc/modprobe.d/CIS.conf
     owner: root
     group: root
+  tags:
+    - kernel
 
 - name: manage_kernel parameters
   when: manage_kernel|bool
@@ -327,6 +329,22 @@
     dest: /etc/pam.d/password-auth
     follow: true
     regexp: 'nullok'
+
+- name: 'Do not allow users to reuse recent passwords - password-auth (change)'
+  when: manage_password_compliance|bool
+  replace:
+    dest: /etc/pam.d/password-auth
+    follow: yes
+    regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
+    replace: '\g<1>{{ pam_unix_remember }}\g<3>'
+
+- name: 'Do not allow users to reuse recent passwords - password-auth (add)'
+  when: manage_password_compliance|bool
+  replace:
+    dest: /etc/pam.d/password-auth
+    follow: yes
+    regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
+    replace: '\g<0> remember={{ pam_unix_remember }}'
 
 - name: 'Do not allow users to reuse recent passwords - system-auth (change)'
   when: manage_password_compliance|bool
@@ -627,7 +645,9 @@
     new_control: required
     new_module_path: pam_faillock.so
     module_arguments: 'preauth
+        audit
         silent
+        deny=5
         unlock_time={{ pam_faillock_unlock_time }}'
     state: before
   loop:
