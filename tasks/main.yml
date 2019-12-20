@@ -619,10 +619,10 @@
 - name: "configure periodic execution of AIDE"
   when: use_aide|bool
   cron:
-    cron_file: /etc/crontab
+    cron_file: /var/spool/cron/root
     name: "run AIDE check"
-    minute: '05'
-    hour: '04'
+    minute: '0'
+    hour: '5'
     weekday: '*'
     user: root
     job: "/usr/sbin/aide --check"
