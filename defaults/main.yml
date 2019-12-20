@@ -43,7 +43,7 @@ TMOUT: 600
 
 pam_manage: true
 # Ban time after failed logon
-pam_faillock_unlock_time: 1800
+pam_faillock_unlock_time: 900
 pam_faillock_deny: 6
 pam_unix_remember: 5
 # Allow direct root login on these tty's
