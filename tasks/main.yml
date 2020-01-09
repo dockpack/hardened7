@@ -117,6 +117,7 @@
 
 - name: Ensure correct mount options set on /dev/shm
   command: 'mount -o remount,rw,noexec,nosuid,nodev,seclabel tmpfs /dev/shm'
+  changed_when: false
   args:
     warn: false
 
@@ -334,7 +335,8 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: yes
+    follow: true
+    # yamllint disable-line rule:line-length
     regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
     replace: '\g<1>{{ pam_unix_remember }}\g<3>'
 
@@ -342,7 +344,7 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: yes
+    follow: true
     regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
     replace: '\g<0> remember={{ pam_unix_remember }}'
 
@@ -350,7 +352,8 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: yes
+    follow: true
+    # yamllint disable-line rule:line-length
     regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
     replace: '\g<1>{{ pam_unix_remember }}\g<3>'
 
@@ -358,7 +361,7 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: yes
+    follow: true
     regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
     replace: '\g<0> remember={{ pam_unix_remember }}'
 
@@ -466,7 +469,7 @@
     dest: /etc/logrotate.conf
     regexp: '^weekly'
     line: "daily"
-    backrefs: yes
+    backrefs: true
   tags:
     - logrotate
 
@@ -475,7 +478,7 @@
     dest: /etc/logrotate.conf
     regexp: '^rotate 4'
     line: "rotate 7"
-    backrefs: yes
+    backrefs: true
   tags:
     - logrotate
 
