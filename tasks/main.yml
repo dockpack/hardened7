@@ -877,3 +877,7 @@
 - name: "Security patches are up to date"
   package:
     name: "*"
+    state: latest
+  tags:
+    - skip_ansible_lint
+...
