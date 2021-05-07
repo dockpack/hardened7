@@ -305,6 +305,13 @@
   tags:
     - chage
 
+- name: ensure password hashing algorithm is SHA-512
+  when: manage_password_compliance|bool
+  command: authconfig --passalgo=sha512 --update
+  changed_when: false
+  tags:
+    - authconfig
+
 - name: set password hashing algorithm in /etc/libuser.conf
   when: manage_password_compliance|bool
   lineinfile:
