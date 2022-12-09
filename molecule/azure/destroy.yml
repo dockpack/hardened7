@@ -1,0 +1,30 @@
+---
+- name: Destroy
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  no_log: "{{ molecule_no_log }}"
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Destroy resource group and all associated resources
+      azure_rm_resourcegroup:
+        name: "{{ resource_group_name }}"
+        state: absent
+        force_delete_nonempty: true
+      register: rg
+
+    # Mandatory configuration for Molecule to function.
+    - name: Populate instance config
+      set_fact:
+        instance_conf: {}
+
+    - name: Dump instance config  # noqa no-handler
+      ansible.builtin.copy:
+        content: "{{ instance_conf | to_json | from_json | to_yaml }}"
+        dest: "{{ molecule_instance_config }}"
+        mode: 0600
+      when:
+        - server.changed is defined
+        - server.changed | bool

@@ -1,0 +1,47 @@
+---
+# molecule test settings
+# https://molecule.readthedocs.io/en/latest/faq.html
+scenario:
+  name: azure
+  test_sequence:
+    - lint
+    - destroy
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
+
+  destroy_sequence:
+    - dependency
+    - destroy
+
+dependency:
+  name: galaxy
+
+driver:
+  name: azure
+
+platforms:
+  - name: centos7
+    image: centos7
+
+provisioner:
+  name: ansible
+  playbooks:
+    create: create.yml
+    prepare: ../shared/prepare.yml
+    converge: ../shared/converge.yml
+    verify: ../shared/verify.yml
+    destroy: destroy.yml
+verifier:
+  name: ansible
+
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
