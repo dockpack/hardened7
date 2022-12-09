@@ -2,10 +2,13 @@
 - name: Prepare
   hosts: all
   become: true
-  gather_facts: false
+  gather_facts: true
 
-  tasks:
+  pre_tasks:
     - name: Install EPEL
       yum:
         name: epel-release
         state: present
+
+  roles:
+    - role: base_common

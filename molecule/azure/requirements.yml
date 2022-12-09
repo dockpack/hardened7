@@ -1,2 +1,5 @@
 ---
-roles: []
+roles:
+  - src: https://github.com/dockpack/base_common.git
+    name: base_common
+    version: master
