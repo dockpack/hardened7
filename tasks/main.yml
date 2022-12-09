@@ -90,7 +90,8 @@
     - /etc/hosts.equiv
     - /root/hosts.equiv
 
-- block:
+- name: Manage shosts.equiv files
+  block:
     - name: detect shosts.equiv files on the system
       find:
         paths: /
@@ -305,6 +306,11 @@
   tags:
     - chage
 
+- name: ensure authconfig is present
+  yum:
+    name: authconfig
+    state: present
+
 - name: ensure password hashing algorithm is SHA-512
   when: manage_password_compliance|bool
   command: authconfig --passalgo=sha512 --update
@@ -326,7 +332,6 @@
     - password_required is defined and password_required|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     regexp: 'nullok'
 
 - name: prevent log in to accounts with empty password - password-auth
@@ -335,14 +340,12 @@
     - password_required is defined and password_required|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: true
     regexp: 'nullok'
 
 - name: 'Do not allow users to reuse recent passwords - password-auth (change)'
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: true
     # yamllint disable-line rule:line-length
     regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
     replace: '\g<1>{{ pam_unix_remember }}\g<3>'
@@ -351,7 +354,6 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/password-auth
-    follow: true
     regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
     replace: '\g<0> remember={{ pam_unix_remember }}'
 
@@ -359,7 +361,6 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     # yamllint disable-line rule:line-length
     regexp: '^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$'
     replace: '\g<1>{{ pam_unix_remember }}\g<3>'
@@ -368,7 +369,6 @@
   when: manage_password_compliance|bool
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     regexp: '^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$'
     replace: '\g<0> remember={{ pam_unix_remember }}'
 

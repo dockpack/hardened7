@@ -1,0 +1,139 @@
+---
+file:
+  /etc/default/useradd:
+    exists: true
+    mode: "0644"
+    size: 119
+    owner: root
+    group: root
+    filetype: file
+    contains:
+      - INACTIVE=30
+  /etc/hosts.equiv:
+    exists: false
+    contains: []
+  /etc/libuser.conf:
+    exists: true
+    mode: "0644"
+    size: 2391
+    owner: root
+    group: root
+    filetype: file
+    contains:
+      - crypt_style = sha512
+  /etc/login.defs:
+    exists: true
+    mode: "0644"
+    size: 2095
+    owner: root
+    group: root
+    filetype: file
+    contains: []
+  /etc/modprobe.d/CIS.conf:
+    exists: true
+    mode: "0644"
+    size: 22
+    owner: root
+    group: root
+    filetype: file
+    contains: []
+  /etc/pam.d/password-auth:
+    exists: true
+    mode: "0777"
+    size: 16
+    owner: root
+    group: root
+    linked-to: password-auth-ac
+    filetype: symlink
+    contains: []
+  /etc/pam.d/system-auth:
+    exists: true
+    mode: "0777"
+    size: 14
+    owner: root
+    group: root
+    linked-to: system-auth-ac
+    filetype: symlink
+    contains: []
+  /etc/profile:
+    exists: true
+    mode: "0644"
+    size: 1819
+    owner: root
+    group: root
+    filetype: file
+  /etc/profile.d/history.sh:
+    exists: true
+    mode: "0644"
+    size: 494
+    owner: root
+    group: root
+    filetype: file
+    contains: []
+  /etc/securetty:
+    exists: true
+    mode: "0600"
+    size: 0
+    owner: root
+    filetype: file
+    contains: []
+  /etc/security/pwquality.conf:
+    exists: true
+    mode: "0644"
+    size: 1766
+    owner: root
+    group: root
+    filetype: file
+    contains: []
+  /etc/ssh/sshd_config:
+    exists: true
+    mode: "0600"
+    size: 4373
+    owner: root
+    group: root
+    filetype: file
+    contains:
+      - AddressFamily inet
+  /etc/sysconfig/network:
+    exists: true
+    mode: "0644"
+    size: 103
+    owner: root
+    group: root
+    filetype: file
+    contains:
+      - NETWORKING_IPV6=no
+      - IPV6INIT=no
+      - RES_OPTIONS="timeout:1 attempts:5
+      - NOZEROCONF=yes
+  /etc/sysctl.d/999-sysctl.conf:
+    exists: true
+    mode: "0644"
+    size: 2259
+    owner: root
+    group: root
+    filetype: file
+    contains: []
+  /root/hosts.equiv:
+    exists: false
+    contains: []
+port:
+  tcp:22:
+    listening: true
+    ip:
+      - 0.0.0.0
+service:
+  rcpbind:
+    enabled: false
+    running: false
+gossfile:
+  /root/test_*.y*ml: {}
+mount:
+  /dev/shm:
+    exists: true
+    opts:
+      - nosuid
+      - nodev
+      - noexec
+    source: tmpfs
+    filesystem: tmpfs

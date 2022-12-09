@@ -1,0 +1,44 @@
+---
+scenario:
+  name: virtualbox
+  test_sequence:
+    - lint
+    - destroy
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
+dependency:
+  name: galaxy
+
+driver:
+  name: vagrant
+  provider:
+    name: virtualbox
+
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+
+platforms:
+  - name: centos7
+    box: voladynamics/centos7
+    box_url: https://app.vagrantup.com/voladynamics/boxes/centos7
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      stdout_callback: yaml
+  playbooks:
+    prepare: prepare.yml
+    converge: ../shared/converge.yml
+    verify: ../shared/verify.yml
+verifier:
+  name: ansible

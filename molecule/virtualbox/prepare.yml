@@ -1,0 +1,25 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: true
+  become: true
+
+  pre_tasks:
+    - name: Remove runner repo
+      file:
+        path: /etc/yum.repos.d/runner_gitlab-runner.repo
+        state: absent
+
+    - name: Clean yum db
+      command: yum clean all
+      changed_when: true
+      args:
+        warn: false
+
+    - name: Install EPEL
+      yum:
+        name: epel-release
+        state: present
+
+  roles:
+    - role: base_common

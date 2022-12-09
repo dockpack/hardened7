@@ -1,0 +1,11 @@
+---
+# yamllint disable rule:line-length
+arm_location: "{{ lookup('env', 'ARM_LOCATION') or 'eastus' }}"
+keypair_path: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
+resource_group_name: "{{ lookup('env','ARM_RESOURCE_GROUP') or 'base_docker' }}"
+role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+ssh_port: 22
+ssh_user: molecule
+subnet_name: molecule_subnet
+virtual_network_name: molecule_vnet
+vm_size: Standard_A0

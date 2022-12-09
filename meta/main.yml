@@ -3,6 +3,8 @@
 galaxy_info:
   author: Bas Meijer
   description: Harden Centos 7
+  role_name: hardened7
+  namespace: dockpack
   company: dockpack
 
   license: MIT
